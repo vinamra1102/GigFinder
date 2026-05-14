@@ -3,6 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import date, datetime, timedelta
+import pandas as pd
 import streamlit as st
 from db.database import get_all_leads, update_lead_status, update_lead_notes, init_db
 from db.models import LeadStatus
@@ -108,7 +109,6 @@ with tab_leads:
         else:
             st.info("No leads yet. Click **Run Scraper Now** in the sidebar to fetch your first batch.")
     else:
-        import pandas as pd
         table_data = []
         for lead in filtered_leads:
             table_data.append({

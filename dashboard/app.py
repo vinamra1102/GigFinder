@@ -9,11 +9,32 @@ from db.models import LeadStatus
 
 init_db()
 
+
+def run_scraper_now():
+    try:
+        from scraper.scraper import scrape_all_subreddits
+        count = scrape_all_subreddits()
+        return count, None
+    except Exception as e:
+        return None, str(e)
+
+
 st.set_page_config(
     page_title="GigFinder",
     page_icon="🔍",
     layout="wide",
 )
+
+with st.sidebar:
+    st.header("Actions")
+    if st.button("Run Scraper Now", use_container_width=True):
+        with st.spinner("Scraping Reddit..."):
+            count, error = run_scraper_now()
+        if error:
+            st.toast(f"Scrape failed: {error}", icon="❌")
+        else:
+            st.toast(f"Done! {count} new lead(s) saved.", icon="✅")
+            st.rerun()
 
 st.title("GigFinder — Reddit Freelance Lead Tracker")
 st.markdown("---")

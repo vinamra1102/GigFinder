@@ -1,0 +1,23 @@
+# Development and test files
+.env
+.env.test
+*.db
+*.sqlite
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Test directory
+tests/
+
+# Local IDE config
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db

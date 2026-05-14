@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 # DB_PATH env var: set to /app/data/leads.db on Railway, defaults to ./leads.db locally
 _db_path = os.getenv("DB_PATH", "./leads.db")
+os.makedirs(os.path.dirname(os.path.abspath(_db_path)), exist_ok=True)
 DATABASE_URL = f"sqlite:///{_db_path}"
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})

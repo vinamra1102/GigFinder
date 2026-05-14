@@ -17,3 +17,9 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def init_db():
+    """Create all tables defined in models."""
+    import db.models  # noqa: F401 — ensure models are registered before create_all
+    Base.metadata.create_all(bind=engine)

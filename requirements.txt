@@ -1,0 +1,6 @@
+praw==7.7.1
+SQLAlchemy==2.0.23
+streamlit==1.29.0
+APScheduler==3.10.4
+python-dotenv==1.0.0
+alembic==1.13.0

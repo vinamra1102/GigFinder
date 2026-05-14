@@ -35,7 +35,11 @@ def run_scheduler():
         name="GigFinder daily Reddit scrape",
     )
     logging.getLogger(__name__).info("Scheduler started — scraper fires daily at 07:00")
-    scheduler.start()
+    try:
+        scheduler.start()
+    except KeyboardInterrupt:
+        logging.getLogger(__name__).info("Scheduler stopped by user (KeyboardInterrupt)")
+        scheduler.shutdown(wait=False)
 
 
 if __name__ == "__main__":

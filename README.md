@@ -15,10 +15,6 @@ GigFinder automatically scrapes Reddit for freelance job opportunities across 10
 - **APScheduler** — daily auto-scrape at 7 AM
 - **python-dotenv** — credential management
 
-## Subreddits Monitored
-
-`r/forhire`, `r/hiring`, `r/webdev`, `r/androiddev`, `r/reactjs`, `r/learnprogramming`, `r/sveltejs`, `r/node`, `r/freelance`, `r/graphic_design`
-
 ## Quick Start
 
 ### 1. Clone and install dependencies
@@ -31,13 +27,14 @@ pip install -r requirements.txt
 
 ### 2. Set up Reddit API credentials
 
-Copy `.env.example` to `.env` and fill in your Reddit API credentials:
+Copy `.env.example` to `.env`:
 
 ```bash
-cp .env.example .env
+cp .env.example .env   # Linux/macOS
+copy .env.example .env  # Windows
 ```
 
-Edit `.env`:
+Edit `.env` and fill in your Reddit credentials:
 
 ```
 REDDIT_CLIENT_ID=your_client_id_here
@@ -45,17 +42,59 @@ REDDIT_CLIENT_SECRET=your_client_secret_here
 REDDIT_USER_AGENT=GigFinder/1.0
 ```
 
-### 3. Run the scraper manually
+### 3. Run the scraper once (manual)
 
 ```bash
 python main.py
 ```
 
-### 4. Launch the dashboard
+### 4. Run the scraper on a daily schedule (7 AM)
+
+```bash
+python main.py --schedule
+```
+
+### 5. Launch the Streamlit dashboard
 
 ```bash
 streamlit run dashboard/app.py
 ```
+
+The dashboard opens at `http://localhost:8501`.
+
+---
+
+## How to Get Reddit API Credentials
+
+1. Go to [https://www.reddit.com/prefs/apps](https://www.reddit.com/prefs/apps)
+2. Scroll to the bottom and click **"are you a developer? create an app..."**
+3. Fill in the form:
+   - **Name:** GigFinder (or any name)
+   - **App type:** select **script**
+   - **Redirect URI:** `http://localhost:8080`
+4. Click **Create app**
+5. You'll see your new app listed:
+   - **client_id** — the string just below your app name (e.g. `abc123XYZ`)
+   - **client_secret** — labeled "secret"
+6. Copy both values into your `.env` file
+
+> GigFinder uses **read-only** PRAW mode — it never posts, votes, or logs into Reddit.
+
+---
+
+## Subreddits Monitored
+
+`r/forhire`, `r/hiring`, `r/webdev`, `r/androiddev`, `r/reactjs`, `r/learnprogramming`, `r/sveltejs`, `r/node`, `r/freelance`, `r/graphic_design`
+
+## Lead Pipeline Statuses
+
+| Status | Color | Meaning |
+|--------|-------|---------|
+| `new` | Blue | Freshly scraped, not yet reviewed |
+| `contacted` | Orange | You have reached out |
+| `follow_up` | Purple | Awaiting a response |
+| `converted` | Green | Turned into a paid gig |
+| `dead` | Red | Not a fit / no response |
 
 ## Project Structure
 
@@ -65,23 +104,25 @@ GigFinder/
 │   ├── subreddits.py     # List of subreddits to scrape
 │   └── keywords.py       # Include/exclude keyword filters
 ├── db/
-│   ├── database.py       # SQLite connection setup
-│   └── models.py         # Lead model and ORM
+│   ├── database.py       # SQLite connection, queries
+│   └── models.py         # Lead ORM model + LeadStatus enum
 ├── scraper/
-│   └── scraper.py        # PRAW scraper logic
+│   └── scraper.py        # PRAW scraper, keyword filtering, DB writes
 ├── dashboard/
 │   └── app.py            # Streamlit dashboard
-├── main.py               # Entry point + scheduler
+├── main.py               # Entry point + APScheduler
 ├── .env.example          # Credential template
 └── requirements.txt
 ```
 
-## Lead Pipeline Statuses
+## Dashboard Features
 
-| Status | Meaning |
-|--------|---------|
-| `new` | Freshly scraped, not yet reviewed |
-| `contacted` | You have reached out |
-| `follow_up` | Awaiting a response |
-| `converted` | Turned into a paid gig |
-| `dead` | Not a fit / no response |
+- **Stats bar** — Leads today, total, new, contacted, converted
+- **All Leads tab** — filterable table + expandable detail per lead
+  - Filter by status, subreddit, date range
+  - Color-coded status badges
+  - One-click status updates (auto-sets `contacted_at` and `follow_up_due`)
+  - Per-lead notes with save button
+  - Direct link to Reddit post
+- **Follow-up Due tab** — overdue leads that need action
+- **Sidebar** — "Run Scraper Now" manual trigger with toast feedback

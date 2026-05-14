@@ -3,6 +3,16 @@ from sqlalchemy import Column, Integer, String, Text, DateTime
 from db.database import Base
 
 
+class LeadStatus:
+    NEW = "new"
+    CONTACTED = "contacted"
+    FOLLOW_UP = "follow_up"
+    CONVERTED = "converted"
+    DEAD = "dead"
+
+    ALL = [NEW, CONTACTED, FOLLOW_UP, CONVERTED, DEAD]
+
+
 class Lead(Base):
     __tablename__ = "leads"
 

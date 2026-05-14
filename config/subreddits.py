@@ -9,4 +9,5 @@ SUBREDDITS = [
     "node",
     "freelance",
     "graphic_design",
+    "gigwork",
 ]

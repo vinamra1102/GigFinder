@@ -41,9 +41,16 @@ st.markdown("---")
 tab_leads, tab_followup = st.tabs(["All Leads", "Follow-up Due"])
 
 with tab_leads:
+    filter_col1, filter_col2, filter_col3 = st.columns(3)
+
     # Status filter
     status_options = ["All"] + LeadStatus.ALL
-    selected_status = st.selectbox("Filter by Status", status_options, key="status_filter")
+    selected_status = filter_col1.selectbox("Filter by Status", status_options, key="status_filter")
+
+    # Subreddit filter
+    subreddits_in_db = sorted(set(l.subreddit for l in all_leads))
+    subreddit_options = ["All"] + subreddits_in_db
+    selected_subreddit = filter_col2.selectbox("Filter by Subreddit", subreddit_options, key="subreddit_filter")
 
     if not filtered_leads:
         st.info("No leads found. Run the scraper to populate leads.")

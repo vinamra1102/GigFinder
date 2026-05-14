@@ -40,3 +40,9 @@ def has_exclude_keywords(post):
     """Return True if any exclude keyword is found in title or body (case-insensitive)."""
     text = (post["title"] + " " + post["post_body"]).lower()
     return any(kw.lower() in text for kw in EXCLUDE_KEYWORDS)
+
+
+def build_keywords_matched(post):
+    """Return comma-separated string of all include keywords matched in this post."""
+    matched = matches_include_keywords(post)
+    return ", ".join(matched) if matched else ""

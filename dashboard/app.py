@@ -24,4 +24,13 @@ leads_today = [l for l in all_leads if l.scraped_at and l.scraped_at.date() == t
 
 # Stats bar
 stats_cols = st.columns(5)
+new_count = sum(1 for l in all_leads if l.status == LeadStatus.NEW)
+contacted_count = sum(1 for l in all_leads if l.status == LeadStatus.CONTACTED)
+converted_count = sum(1 for l in all_leads if l.status == LeadStatus.CONVERTED)
+total_count = len(all_leads)
+
 stats_cols[0].metric("Leads Today", len(leads_today))
+stats_cols[1].metric("Total Leads", total_count)
+stats_cols[2].metric("New", new_count)
+stats_cols[3].metric("Contacted", contacted_count)
+stats_cols[4].metric("Converted", converted_count)

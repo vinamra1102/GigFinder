@@ -93,3 +93,4 @@ with tab_leads:
                 st.markdown(f"**Scraped:** {lead.scraped_at.strftime('%Y-%m-%d %H:%M') if lead.scraped_at else 'N/A'}")
                 st.markdown("**Post Body:**")
                 st.text(lead.post_body or "(no body)")
+                st.link_button("Open Reddit Post", lead.url)

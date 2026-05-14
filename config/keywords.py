@@ -1,0 +1,33 @@
+INCLUDE_KEYWORDS = [
+    "looking for a developer",
+    "need a developer",
+    "hiring a developer",
+    "need someone to build",
+    "budget",
+    "paid",
+    "looking for freelancer",
+    "need a website",
+    "build an app",
+    "fix a bug",
+    "need an api",
+    "quick fix",
+    "small project",
+    "simple website",
+    "landing page",
+    "one page",
+    "urgent",
+    "asap",
+    "this week",
+    "few hours",
+    "small task",
+    "minor changes",
+]
+
+EXCLUDE_KEYWORDS = [
+    "co-founder",
+    "equity",
+    "long term",
+    "full time",
+    "ongoing",
+    "months",
+]

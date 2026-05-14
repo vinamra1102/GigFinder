@@ -1,6 +1,7 @@
 import os
 import praw
 from dotenv import load_dotenv
+from config.keywords import INCLUDE_KEYWORDS, EXCLUDE_KEYWORDS
 
 load_dotenv()
 
@@ -27,3 +28,9 @@ def fetch_posts(reddit, subreddit_name, limit=50):
             "post_body": submission.selftext[:500] if submission.selftext else "",
         })
     return posts
+
+
+def matches_include_keywords(post):
+    """Return list of matched include keywords found in title or body (case-insensitive)."""
+    text = (post["title"] + " " + post["post_body"]).lower()
+    return [kw for kw in INCLUDE_KEYWORDS if kw.lower() in text]

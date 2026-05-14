@@ -34,3 +34,31 @@ stats_cols[1].metric("Total Leads", total_count)
 stats_cols[2].metric("New", new_count)
 stats_cols[3].metric("Contacted", contacted_count)
 stats_cols[4].metric("Converted", converted_count)
+
+st.markdown("---")
+
+# Leads table (filters applied below)
+tab_leads, tab_followup = st.tabs(["All Leads", "Follow-up Due"])
+
+with tab_leads:
+    # Filters will be added in subsequent commits
+    filtered_leads = all_leads
+
+    if not filtered_leads:
+        st.info("No leads found. Run the scraper to populate leads.")
+    else:
+        import pandas as pd
+        table_data = []
+        for lead in filtered_leads:
+            table_data.append({
+                "ID": lead.id,
+                "Title": lead.title[:80],
+                "Subreddit": lead.subreddit,
+                "Author": lead.author,
+                "Status": lead.status,
+                "Keywords": lead.keywords_matched or "",
+                "Scraped At": lead.scraped_at.strftime("%Y-%m-%d %H:%M") if lead.scraped_at else "",
+                "Contacted At": lead.contacted_at.strftime("%Y-%m-%d") if lead.contacted_at else "",
+                "Follow-up Due": lead.follow_up_due.strftime("%Y-%m-%d") if lead.follow_up_due else "",
+            })
+        st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)

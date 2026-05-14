@@ -41,8 +41,9 @@ st.markdown("---")
 tab_leads, tab_followup = st.tabs(["All Leads", "Follow-up Due"])
 
 with tab_leads:
-    # Filters will be added in subsequent commits
-    filtered_leads = all_leads
+    # Status filter
+    status_options = ["All"] + LeadStatus.ALL
+    selected_status = st.selectbox("Filter by Status", status_options, key="status_filter")
 
     if not filtered_leads:
         st.info("No leads found. Run the scraper to populate leads.")

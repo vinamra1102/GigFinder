@@ -23,8 +23,19 @@ def run_scraper():
 
 
 def run_scheduler():
-    # Will be wired to APScheduler in Phase 4
-    pass
+    """Start the blocking scheduler: runs scraper daily at 7 AM."""
+    init_db()
+    scheduler = BlockingScheduler()
+    scheduler.add_job(
+        scrape_all_subreddits,
+        trigger="cron",
+        hour=7,
+        minute=0,
+        id="daily_scrape",
+        name="GigFinder daily Reddit scrape",
+    )
+    logging.getLogger(__name__).info("Scheduler started — scraper fires daily at 07:00")
+    scheduler.start()
 
 
 if __name__ == "__main__":

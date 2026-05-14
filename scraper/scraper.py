@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 import praw
 from dotenv import load_dotenv
 from config.keywords import INCLUDE_KEYWORDS, EXCLUDE_KEYWORDS
@@ -7,6 +8,8 @@ from config.subreddits import SUBREDDITS
 from db.database import SessionLocal
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 def get_reddit():
@@ -20,6 +23,7 @@ def get_reddit():
 
 def fetch_posts(reddit, subreddit_name, limit=50):
     """Fetch the latest `limit` new posts from a subreddit and return raw post data."""
+    logger.debug("Fetching %d posts from r/%s", limit, subreddit_name)
     posts = []
     subreddit = reddit.subreddit(subreddit_name)
     for submission in subreddit.new(limit=limit):
@@ -30,6 +34,7 @@ def fetch_posts(reddit, subreddit_name, limit=50):
             "subreddit": subreddit_name,
             "post_body": submission.selftext[:500] if submission.selftext else "",
         })
+    logger.debug("Fetched %d posts from r/%s", len(posts), subreddit_name)
     return posts
 
 
@@ -76,28 +81,35 @@ def save_lead(post, keywords_matched):
         )
         db.add(lead)
         db.commit()
+        logger.info("Saved lead: %s", post["title"][:60])
     finally:
         db.close()
 
 
 def scrape_all_subreddits():
     """Iterate over all configured subreddits, filter posts, and save qualifying leads."""
+    logger.info("Starting scrape of %d subreddits", len(SUBREDDITS))
     reddit = get_reddit()
     total_saved = 0
     for subreddit_name in SUBREDDITS:
+        logger.info("Scraping r/%s ...", subreddit_name)
         posts = fetch_posts(reddit, subreddit_name)
         saved = 0
         for post in posts:
             if has_exclude_keywords(post):
+                logger.debug("Excluded (keyword): %s", post["title"][:60])
                 continue
             matched = matches_include_keywords(post)
             if not matched:
                 continue
             if url_exists(post["url"]):
+                logger.debug("Duplicate skipped: %s", post["url"])
                 continue
             keywords_matched = build_keywords_matched(post)
             save_lead(post, keywords_matched)
             saved += 1
+        logger.info("r/%s: saved %d new leads", subreddit_name, saved)
         total_saved += saved
         time.sleep(2)  # respect Reddit rate limits between subreddit fetches
+    logger.info("Scrape complete — %d total new leads saved", total_saved)
     return total_saved

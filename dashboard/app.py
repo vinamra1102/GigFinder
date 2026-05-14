@@ -52,6 +52,21 @@ with tab_leads:
     subreddit_options = ["All"] + subreddits_in_db
     selected_subreddit = filter_col2.selectbox("Filter by Subreddit", subreddit_options, key="subreddit_filter")
 
+    # Date range filter
+    date_from = filter_col3.date_input("From Date", value=today - timedelta(days=30), key="date_from")
+    date_to = filter_col3.date_input("To Date", value=today, key="date_to")
+
+    # Apply filters
+    filtered_leads = all_leads
+    if selected_status != "All":
+        filtered_leads = [l for l in filtered_leads if l.status == selected_status]
+    if selected_subreddit != "All":
+        filtered_leads = [l for l in filtered_leads if l.subreddit == selected_subreddit]
+    filtered_leads = [
+        l for l in filtered_leads
+        if l.scraped_at and date_from <= l.scraped_at.date() <= date_to
+    ]
+
     if not filtered_leads:
         st.info("No leads found. Run the scraper to populate leads.")
     else:

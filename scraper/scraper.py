@@ -1,39 +1,44 @@
 import os
 import time
 import logging
-import praw
-from dotenv import load_dotenv
+import requests
 from config.keywords import INCLUDE_KEYWORDS, EXCLUDE_KEYWORDS
 from config.subreddits import SUBREDDITS
 from db.database import SessionLocal
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
 
+REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "GigFinder/1.0")
+REDDIT_JSON_URL = "https://www.reddit.com/r/{subreddit}/new.json"
 
-def get_reddit():
-    """Return a read-only PRAW Reddit instance using .env credentials."""
-    return praw.Reddit(
-        client_id=os.getenv("REDDIT_CLIENT_ID"),
-        client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-        user_agent=os.getenv("REDDIT_USER_AGENT", "GigFinder/1.0"),
-    )
+SESSION = requests.Session()
+SESSION.headers.update({"User-Agent": REDDIT_USER_AGENT})
 
 
-def fetch_posts(reddit, subreddit_name, limit=50):
-    """Fetch the latest `limit` new posts from a subreddit and return raw post data."""
+def fetch_posts(subreddit_name, limit=50):
+    """Fetch the latest posts from a subreddit using the public Reddit JSON API."""
     logger.debug("Fetching %d posts from r/%s", limit, subreddit_name)
+    url = REDDIT_JSON_URL.format(subreddit=subreddit_name)
+    try:
+        response = SESSION.get(url, params={"limit": limit}, timeout=15)
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        logger.error("Failed to fetch r/%s: %s", subreddit_name, exc)
+        return []
+
     posts = []
-    subreddit = reddit.subreddit(subreddit_name)
-    for submission in subreddit.new(limit=limit):
+    for child in response.json().get("data", {}).get("children", []):
+        data = child.get("data", {})
+        author = data.get("author", "[deleted]") or "[deleted]"
+        selftext = data.get("selftext", "") or ""
         posts.append({
-            "title": submission.title,
-            "url": f"https://www.reddit.com{submission.permalink}",
-            "author": str(submission.author) if submission.author else "[deleted]",
+            "title": data.get("title", ""),
+            "url": f"https://www.reddit.com{data.get('permalink', '')}",
+            "author": author,
             "subreddit": subreddit_name,
-            "post_body": submission.selftext[:500] if submission.selftext else "",
+            "post_body": selftext[:500],
         })
+
     logger.debug("Fetched %d posts from r/%s", len(posts), subreddit_name)
     return posts
 
@@ -89,11 +94,10 @@ def save_lead(post, keywords_matched):
 def scrape_all_subreddits():
     """Iterate over all configured subreddits, filter posts, and save qualifying leads."""
     logger.info("Starting scrape of %d subreddits", len(SUBREDDITS))
-    reddit = get_reddit()
     total_saved = 0
     for subreddit_name in SUBREDDITS:
         logger.info("Scraping r/%s ...", subreddit_name)
-        posts = fetch_posts(reddit, subreddit_name)
+        posts = fetch_posts(subreddit_name)
         saved = 0
         for post in posts:
             if has_exclude_keywords(post):

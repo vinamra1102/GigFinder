@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock, patch
 
 from scraper.scraper import (
@@ -12,41 +13,48 @@ import db.database as db_mod
 from db.models import Lead
 
 
-def _make_submission(title="Test Post", selftext="", permalink="/r/test/comments/abc/test", author="user1"):
-    """Create a mock PRAW Submission object."""
-    sub = MagicMock()
-    sub.title = title
-    sub.selftext = selftext
-    sub.permalink = permalink
-    sub.author = MagicMock(__str__=lambda self: author) if author else None
-    return sub
+def _make_response(posts):
+    """Build a mock requests.Response returning Reddit JSON for given post dicts."""
+    children = [{"data": p} for p in posts]
+    payload = {"data": {"children": children}}
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = payload
+    mock_resp.raise_for_status.return_value = None
+    return mock_resp
+
+
+def _post_data(title="Test Post", selftext="", permalink="/r/test/comments/abc/test", author="user1"):
+    return {
+        "title": title,
+        "selftext": selftext,
+        "permalink": permalink,
+        "author": author,
+    }
 
 
 # ──────────────────────────────────────────────
-# 1. PRAW connects successfully (mocked)
+# 1. fetch_posts returns correct number of posts
 # ──────────────────────────────────────────────
 
-@patch("scraper.scraper.praw.Reddit")
-def test_praw_connects(mock_reddit_cls):
-    from scraper.scraper import get_reddit
-    mock_reddit_cls.return_value = MagicMock()
-    reddit = get_reddit()
-    assert reddit is not None
-    mock_reddit_cls.assert_called_once()
-
-
-# ──────────────────────────────────────────────
-# 2. fetch_posts returns correct number of posts
-# ──────────────────────────────────────────────
-
-def test_fetch_posts_returns_correct_count():
-    mock_reddit = MagicMock()
-    submissions = [_make_submission(permalink=f"/r/test/comments/{i}/t") for i in range(5)]
-    mock_reddit.subreddit.return_value.new.return_value = submissions
-
-    posts = fetch_posts(mock_reddit, "forhire", limit=5)
+@patch("scraper.scraper.SESSION")
+def test_fetch_posts_returns_correct_count(mock_session):
+    mock_session.get.return_value = _make_response([
+        _post_data(permalink=f"/r/test/comments/{i}/t") for i in range(5)
+    ])
+    posts = fetch_posts("forhire", limit=5)
     assert len(posts) == 5
-    mock_reddit.subreddit.return_value.new.assert_called_once_with(limit=5)
+
+
+# ──────────────────────────────────────────────
+# 2. HTTP error returns empty list (no crash)
+# ──────────────────────────────────────────────
+
+@patch("scraper.scraper.SESSION")
+def test_fetch_posts_http_error_returns_empty(mock_session):
+    import requests as req
+    mock_session.get.side_effect = req.RequestException("timeout")
+    posts = fetch_posts("forhire", limit=5)
+    assert posts == []
 
 
 # ──────────────────────────────────────────────
@@ -55,8 +63,7 @@ def test_fetch_posts_returns_correct_count():
 
 def test_include_keyword_in_title():
     post = {"title": "Looking for a developer to help", "post_body": "some random text"}
-    matched = matches_include_keywords(post)
-    assert "looking for a developer" in matched
+    assert "looking for a developer" in matches_include_keywords(post)
 
 
 # ──────────────────────────────────────────────
@@ -65,8 +72,7 @@ def test_include_keyword_in_title():
 
 def test_include_keyword_in_body():
     post = {"title": "Help needed", "post_body": "I have a budget for this project"}
-    matched = matches_include_keywords(post)
-    assert "budget" in matched
+    assert "budget" in matches_include_keywords(post)
 
 
 # ──────────────────────────────────────────────
@@ -75,14 +81,12 @@ def test_include_keyword_in_body():
 
 def test_include_keyword_case_insensitive():
     post = {"title": "LOOKING FOR A DEVELOPER right now", "post_body": ""}
-    matched = matches_include_keywords(post)
-    assert "looking for a developer" in matched
+    assert "looking for a developer" in matches_include_keywords(post)
 
 
 def test_include_keyword_mixed_case():
     post = {"title": "Need A Website built", "post_body": ""}
-    matched = matches_include_keywords(post)
-    assert "need a website" in matched
+    assert "need a website" in matches_include_keywords(post)
 
 
 # ──────────────────────────────────────────────
@@ -112,8 +116,8 @@ def test_post_with_include_and_exclude():
         "title": "Looking for a developer, co-founder role",
         "post_body": "equity split 50/50",
     }
-    assert matches_include_keywords(post)  # has include hits
-    assert has_exclude_keywords(post) is True  # but also exclude hits
+    assert matches_include_keywords(post)
+    assert has_exclude_keywords(post) is True
 
 
 # ──────────────────────────────────────────────
@@ -130,30 +134,41 @@ def test_keywords_matched_lists_all():
 
 
 # ──────────────────────────────────────────────
-# 9. empty post body is handled without crash
+# 9. empty post body handled without crash
 # ──────────────────────────────────────────────
 
 def test_empty_body_no_crash():
     post = {"title": "Budget project available", "post_body": ""}
-    matched = matches_include_keywords(post)
-    assert "budget" in matched
+    assert "budget" in matches_include_keywords(post)
     assert not has_exclude_keywords(post)
-    result = build_keywords_matched(post)
-    assert result != ""
+    assert build_keywords_matched(post) != ""
 
 
 # ──────────────────────────────────────────────
-# 10. save_lead truncates post body to 500 chars
+# 10. fetch_posts truncates selftext to 500 chars
+# ──────────────────────────────────────────────
+
+@patch("scraper.scraper.SESSION")
+def test_fetch_posts_truncates_body(mock_session):
+    long_text = "A" * 800
+    mock_session.get.return_value = _make_response([
+        _post_data(selftext=long_text, permalink="/r/test/comments/trunc/t")
+    ])
+    posts = fetch_posts("forhire", limit=1)
+    assert len(posts[0]["post_body"]) == 500
+
+
+# ──────────────────────────────────────────────
+# 11. save_lead stores post body correctly
 # ──────────────────────────────────────────────
 
 def test_save_lead_body_stored():
-    long_body = "x" * 600
     post = {
         "title": "Test truncation",
         "url": "https://reddit.com/r/test/trunc1",
         "author": "truncator",
         "subreddit": "forhire",
-        "post_body": long_body[:500],  # scraper already truncates in fetch_posts
+        "post_body": "x" * 500,
     }
     save_lead(post, "budget")
     session = db_mod.SessionLocal()
@@ -165,12 +180,14 @@ def test_save_lead_body_stored():
         session.close()
 
 
-def test_fetch_posts_truncates_body():
-    """Verify fetch_posts truncates selftext to 500 chars."""
-    mock_reddit = MagicMock()
-    long_text = "A" * 800
-    submissions = [_make_submission(selftext=long_text)]
-    mock_reddit.subreddit.return_value.new.return_value = submissions
+# ──────────────────────────────────────────────
+# 12. None author falls back to [deleted]
+# ──────────────────────────────────────────────
 
-    posts = fetch_posts(mock_reddit, "forhire", limit=1)
-    assert len(posts[0]["post_body"]) == 500
+@patch("scraper.scraper.SESSION")
+def test_none_author_becomes_deleted(mock_session):
+    mock_session.get.return_value = _make_response([
+        _post_data(author=None, permalink="/r/test/comments/noauth/t")
+    ])
+    posts = fetch_posts("forhire", limit=1)
+    assert posts[0]["author"] == "[deleted]"

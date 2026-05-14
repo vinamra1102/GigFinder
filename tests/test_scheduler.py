@@ -10,6 +10,19 @@ from db.database import init_db, get_all_leads
 import db.database as db_mod
 
 
+def _make_response(posts):
+    children = [{"data": p} for p in posts]
+    payload = {"data": {"children": children}}
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = payload
+    mock_resp.raise_for_status.return_value = None
+    return mock_resp
+
+
+def _post_data(title="Test Post", selftext="", permalink="/r/test/comments/abc/test", author="user1"):
+    return {"title": title, "selftext": selftext, "permalink": permalink, "author": author}
+
+
 # ──────────────────────────────────────────────
 # 1. Scheduler initializes without error
 # ──────────────────────────────────────────────
@@ -33,30 +46,20 @@ def test_scheduler_initializes():
 # 2. Short-interval scheduler triggers scraper
 # ──────────────────────────────────────────────
 
-@patch("scraper.scraper.get_reddit")
 @patch("scraper.scraper.time.sleep")
 @patch("scraper.scraper.SUBREDDITS", ["forhire"])
-def test_scheduler_triggers_scraper(mock_sleep, mock_get_reddit):
+@patch("scraper.scraper.SESSION")
+def test_scheduler_triggers_scraper(mock_session, mock_sleep):
     init_db()
-
-    mock_reddit = MagicMock()
-    sub = MagicMock()
-    submission = MagicMock()
-    submission.title = "Need a developer ASAP"
-    submission.selftext = "Budget $500"
-    submission.permalink = "/r/forhire/comments/sched1/t"
-    submission.author = MagicMock(__str__=lambda self: "scheduler_user")
-    sub.new.return_value = [submission]
-    mock_reddit.subreddit.return_value = sub
-    mock_get_reddit.return_value = mock_reddit
+    mock_session.get.return_value = _make_response([
+        _post_data("Need a developer ASAP", "Budget $500", "/r/forhire/comments/sched1/t", "scheduler_user"),
+    ])
 
     from scraper.scraper import scrape_all_subreddits
 
-    # Directly invoke to prove the function the scheduler would call works
     count = scrape_all_subreddits()
     assert count >= 1
 
-    # Now verify scheduler can add and retrieve the job
     scheduler = BackgroundScheduler()
     scheduler.add_job(scrape_all_subreddits, trigger="interval", seconds=60, id="test_interval")
     job = scheduler.get_job("test_interval")
@@ -68,22 +71,14 @@ def test_scheduler_triggers_scraper(mock_sleep, mock_get_reddit):
 # 3. Scheduler logs the run
 # ──────────────────────────────────────────────
 
-@patch("scraper.scraper.get_reddit")
 @patch("scraper.scraper.time.sleep")
 @patch("scraper.scraper.SUBREDDITS", ["forhire"])
-def test_scheduler_logs_run(mock_sleep, mock_get_reddit, caplog):
+@patch("scraper.scraper.SESSION")
+def test_scheduler_logs_run(mock_session, mock_sleep, caplog):
     init_db()
-
-    mock_reddit = MagicMock()
-    sub = MagicMock()
-    submission = MagicMock()
-    submission.title = "Need a developer for quick fix"
-    submission.selftext = "Budget $200"
-    submission.permalink = "/r/forhire/comments/log1/t"
-    submission.author = MagicMock(__str__=lambda self: "log_user")
-    sub.new.return_value = [submission]
-    mock_reddit.subreddit.return_value = sub
-    mock_get_reddit.return_value = mock_reddit
+    mock_session.get.return_value = _make_response([
+        _post_data("Need a developer for quick fix", "Budget $200", "/r/forhire/comments/log1/t", "log_user"),
+    ])
 
     from scraper.scraper import scrape_all_subreddits
 
@@ -98,22 +93,14 @@ def test_scheduler_logs_run(mock_sleep, mock_get_reddit, caplog):
 # 4. No duplicates after scheduled run
 # ──────────────────────────────────────────────
 
-@patch("scraper.scraper.get_reddit")
 @patch("scraper.scraper.time.sleep")
 @patch("scraper.scraper.SUBREDDITS", ["forhire"])
-def test_no_duplicates_after_scheduled_run(mock_sleep, mock_get_reddit):
+@patch("scraper.scraper.SESSION")
+def test_no_duplicates_after_scheduled_run(mock_session, mock_sleep):
     init_db()
-
-    mock_reddit = MagicMock()
-    sub = MagicMock()
-    submission = MagicMock()
-    submission.title = "Looking for freelancer urgently"
-    submission.selftext = "Budget $300, paid"
-    submission.permalink = "/r/forhire/comments/nodup_sched/t"
-    submission.author = MagicMock(__str__=lambda self: "nodup_user")
-    sub.new.return_value = [submission]
-    mock_reddit.subreddit.return_value = sub
-    mock_get_reddit.return_value = mock_reddit
+    mock_session.get.return_value = _make_response([
+        _post_data("Looking for freelancer urgently", "Budget $300, paid", "/r/forhire/comments/nodup_sched/t", "nodup_user"),
+    ])
 
     from scraper.scraper import scrape_all_subreddits
 

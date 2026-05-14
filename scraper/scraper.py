@@ -1,7 +1,9 @@
 import os
+import time
 import praw
 from dotenv import load_dotenv
 from config.keywords import INCLUDE_KEYWORDS, EXCLUDE_KEYWORDS
+from config.subreddits import SUBREDDITS
 from db.database import SessionLocal
 
 load_dotenv()
@@ -76,3 +78,25 @@ def save_lead(post, keywords_matched):
         db.commit()
     finally:
         db.close()
+
+
+def scrape_all_subreddits():
+    """Iterate over all configured subreddits, filter posts, and save qualifying leads."""
+    reddit = get_reddit()
+    total_saved = 0
+    for subreddit_name in SUBREDDITS:
+        posts = fetch_posts(reddit, subreddit_name)
+        saved = 0
+        for post in posts:
+            if has_exclude_keywords(post):
+                continue
+            matched = matches_include_keywords(post)
+            if not matched:
+                continue
+            if url_exists(post["url"]):
+                continue
+            keywords_matched = build_keywords_matched(post)
+            save_lead(post, keywords_matched)
+            saved += 1
+        total_saved += saved
+    return total_saved

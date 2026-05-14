@@ -60,3 +60,18 @@ def update_lead_status(lead_id, new_status):
         return True
     finally:
         db.close()
+
+
+def update_lead_notes(lead_id, notes):
+    """Persist free-text notes for a lead."""
+    from db.models import Lead
+    db = SessionLocal()
+    try:
+        lead = db.query(Lead).filter(Lead.id == lead_id).first()
+        if not lead:
+            return False
+        lead.notes = notes
+        db.commit()
+        return True
+    finally:
+        db.close()

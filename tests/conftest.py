@@ -21,6 +21,11 @@ def test_database():
     db_mod.engine = test_engine
     db_mod.SessionLocal = test_session
 
+    # Also patch any module that imported SessionLocal directly
+    import scraper.scraper as scraper_mod
+    original_scraper_session = getattr(scraper_mod, "SessionLocal", None)
+    scraper_mod.SessionLocal = test_session
+
     from db.database import Base
     Base.metadata.create_all(bind=test_engine)
 
@@ -31,6 +36,8 @@ def test_database():
 
     db_mod.engine = original_engine
     db_mod.SessionLocal = original_session
+    if original_scraper_session is not None:
+        scraper_mod.SessionLocal = original_scraper_session
 
     if os.path.exists(TEST_DB_PATH):
         os.remove(TEST_DB_PATH)

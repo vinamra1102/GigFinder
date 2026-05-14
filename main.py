@@ -42,6 +42,25 @@ def run_scheduler():
         scheduler.shutdown(wait=False)
 
 
+def run_test_scheduler():
+    """Run scheduler with a 30-second interval for quick local testing."""
+    init_db()
+    scheduler = BlockingScheduler()
+    scheduler.add_job(
+        scrape_all_subreddits,
+        trigger="interval",
+        seconds=30,
+        id="test_scrape",
+        name="GigFinder test scrape (30s interval)",
+    )
+    logging.getLogger(__name__).info("TEST scheduler started — fires every 30 seconds")
+    try:
+        scheduler.start()
+    except KeyboardInterrupt:
+        logging.getLogger(__name__).info("Test scheduler stopped.")
+        scheduler.shutdown(wait=False)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GigFinder Reddit Lead Scraper")
     parser.add_argument(
@@ -49,9 +68,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Run on a daily schedule instead of a one-shot scrape",
     )
+    parser.add_argument(
+        "--test-schedule",
+        action="store_true",
+        help="Run scheduler every 30 seconds for local testing",
+    )
     args = parser.parse_args()
 
     if args.schedule:
         run_scheduler()
+    elif args.test_schedule:
+        run_test_scheduler()
     else:
         run_scraper()

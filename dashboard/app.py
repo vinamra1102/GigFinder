@@ -103,7 +103,10 @@ with tab_leads:
     ]
 
     if not filtered_leads:
-        st.info("No leads found. Run the scraper to populate leads.")
+        if all_leads:
+            st.info("No leads match the current filters. Try widening your filter criteria.")
+        else:
+            st.info("No leads yet. Click **Run Scraper Now** in the sidebar to fetch your first batch.")
     else:
         import pandas as pd
         table_data = []

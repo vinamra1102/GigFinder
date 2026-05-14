@@ -94,3 +94,19 @@ with tab_leads:
                 st.markdown("**Post Body:**")
                 st.text(lead.post_body or "(no body)")
                 st.link_button("Open Reddit Post", lead.url)
+
+                st.markdown("**Update Status:**")
+                current_idx = LeadStatus.ALL.index(lead.status) if lead.status in LeadStatus.ALL else 0
+                new_status = st.selectbox(
+                    "Status",
+                    LeadStatus.ALL,
+                    index=current_idx,
+                    key=f"status_{lead.id}",
+                    label_visibility="collapsed",
+                )
+                if new_status != lead.status:
+                    if update_lead_status(lead.id, new_status):
+                        st.success(f"Status updated to '{new_status}'")
+                        if new_status == LeadStatus.CONTACTED:
+                            st.info("contacted_at and follow_up_due auto-set (+3 days).")
+                        st.rerun()

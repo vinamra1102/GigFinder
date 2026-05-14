@@ -85,3 +85,11 @@ with tab_leads:
                 "Follow-up Due": lead.follow_up_due.strftime("%Y-%m-%d") if lead.follow_up_due else "",
             })
         st.dataframe(pd.DataFrame(table_data), use_container_width=True, hide_index=True)
+
+        st.markdown("### Lead Details")
+        for lead in filtered_leads:
+            with st.expander(f"[{lead.status.upper()}] {lead.title[:90]}"):
+                st.markdown(f"**Subreddit:** r/{lead.subreddit} | **Author:** u/{lead.author}")
+                st.markdown(f"**Scraped:** {lead.scraped_at.strftime('%Y-%m-%d %H:%M') if lead.scraped_at else 'N/A'}")
+                st.markdown("**Post Body:**")
+                st.text(lead.post_body or "(no body)")

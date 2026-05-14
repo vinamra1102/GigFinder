@@ -57,3 +57,22 @@ def url_exists(url):
         return db.query(Lead).filter(Lead.url == url).first() is not None
     finally:
         db.close()
+
+
+def save_lead(post, keywords_matched):
+    """Insert a new lead into the database."""
+    from db.models import Lead
+    db = SessionLocal()
+    try:
+        lead = Lead(
+            title=post["title"],
+            url=post["url"],
+            author=post["author"],
+            subreddit=post["subreddit"],
+            post_body=post["post_body"],
+            keywords_matched=keywords_matched,
+        )
+        db.add(lead)
+        db.commit()
+    finally:
+        db.close()

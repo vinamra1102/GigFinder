@@ -2,6 +2,7 @@ import os
 import praw
 from dotenv import load_dotenv
 from config.keywords import INCLUDE_KEYWORDS, EXCLUDE_KEYWORDS
+from db.database import SessionLocal
 
 load_dotenv()
 
@@ -46,3 +47,13 @@ def build_keywords_matched(post):
     """Return comma-separated string of all include keywords matched in this post."""
     matched = matches_include_keywords(post)
     return ", ".join(matched) if matched else ""
+
+
+def url_exists(url):
+    """Return True if a lead with this URL already exists in the database."""
+    from db.models import Lead
+    db = SessionLocal()
+    try:
+        return db.query(Lead).filter(Lead.url == url).first() is not None
+    finally:
+        db.close()

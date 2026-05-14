@@ -10,6 +10,20 @@ from db.models import LeadStatus
 init_db()
 
 
+STATUS_COLORS = {
+    "new": "#1f77b4",
+    "contacted": "#ff7f0e",
+    "follow_up": "#9467bd",
+    "converted": "#2ca02c",
+    "dead": "#d62728",
+}
+
+
+def status_badge(status):
+    color = STATUS_COLORS.get(status, "#888888")
+    return f'<span style="background:{color};color:white;padding:2px 8px;border-radius:4px;font-size:0.8em">{status.upper()}</span>'
+
+
 def run_scraper_now():
     try:
         from scraper.scraper import scrape_all_subreddits
@@ -109,7 +123,8 @@ with tab_leads:
 
         st.markdown("### Lead Details")
         for lead in filtered_leads:
-            with st.expander(f"[{lead.status.upper()}] {lead.title[:90]}"):
+            with st.expander(f"{lead.title[:90]}"):
+                st.markdown(status_badge(lead.status), unsafe_allow_html=True)
                 st.markdown(f"**Subreddit:** r/{lead.subreddit} | **Author:** u/{lead.author}")
                 st.markdown(f"**Scraped:** {lead.scraped_at.strftime('%Y-%m-%d %H:%M') if lead.scraped_at else 'N/A'}")
                 st.markdown("**Post Body:**")

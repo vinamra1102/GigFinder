@@ -110,3 +110,18 @@ with tab_leads:
                         if new_status == LeadStatus.CONTACTED:
                             st.info("contacted_at and follow_up_due auto-set (+3 days).")
                         st.rerun()
+
+                st.markdown("**Notes:**")
+                notes_text = st.text_area(
+                    "Notes",
+                    value=lead.notes or "",
+                    key=f"notes_{lead.id}",
+                    label_visibility="collapsed",
+                    height=80,
+                )
+                if st.button("Save Notes", key=f"save_notes_{lead.id}"):
+                    if update_lead_notes(lead.id, notes_text):
+                        st.success("Notes saved.")
+                        st.rerun()
+                    else:
+                        st.error("Failed to save notes.")

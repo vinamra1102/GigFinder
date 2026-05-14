@@ -5,6 +5,7 @@
 
 import argparse
 import logging
+from apscheduler.schedulers.blocking import BlockingScheduler
 
 logging.basicConfig(
     level=logging.INFO,

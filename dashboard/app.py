@@ -125,3 +125,21 @@ with tab_leads:
                         st.rerun()
                     else:
                         st.error("Failed to save notes.")
+
+with tab_followup:
+    now = datetime.utcnow()
+    overdue_leads = [
+        l for l in all_leads
+        if l.follow_up_due and l.follow_up_due <= now
+        and l.status not in (LeadStatus.CONVERTED, LeadStatus.DEAD)
+    ]
+    if not overdue_leads:
+        st.info("No overdue follow-ups. You're all caught up!")
+    else:
+        st.warning(f"{len(overdue_leads)} lead(s) need follow-up.")
+        for lead in overdue_leads:
+            with st.expander(f"[OVERDUE] {lead.title[:90]}"):
+                st.markdown(f"**Subreddit:** r/{lead.subreddit} | **Author:** u/{lead.author}")
+                st.markdown(f"**Follow-up was due:** {lead.follow_up_due.strftime('%Y-%m-%d')}")
+                st.markdown(f"**Status:** {lead.status}")
+                st.link_button("Open Reddit Post", lead.url)

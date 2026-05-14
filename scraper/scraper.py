@@ -99,4 +99,5 @@ def scrape_all_subreddits():
             save_lead(post, keywords_matched)
             saved += 1
         total_saved += saved
+        time.sleep(2)  # respect Reddit rate limits between subreddit fetches
     return total_saved
